@@ -1,0 +1,170 @@
+import net.ltgt.gradle.errorprone.CheckSeverity
+
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures'
+    id 'idea'
+    id 'net.neoforged.moddev'
+    id 'net.ltgt.errorprone'
+    id 'com.diffplug.spotless'
+}
+
+var versions = new Properties()
+getClass().getResourceAsStream('/com/ejafi/gradle/versions.properties').withCloseable { versions.load(it) }
+
+version = project.mod_version
+group = project.mod_group_id
+
+base {
+    archivesName = project.mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output + sourceSets.testFixtures.output
+        runtimeClasspath += sourceSets.main.output + sourceSets.testFixtures.output
+    }
+    datagen {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    main.resources {
+        srcDir 'src/generated/resources'
+        exclude '.cache'
+    }
+}
+
+configurations {
+    gameTestImplementation.extendsFrom implementation
+    gameTestCompileOnly.extendsFrom compileOnly
+    datagenImplementation.extendsFrom implementation
+    datagenCompileOnly.extendsFrom compileOnly
+}
+
+neoForge {
+    version = project.neo_version
+
+    addModdingDependenciesTo sourceSets.testFixtures
+    addModdingDependenciesTo sourceSets.gameTest
+    addModdingDependenciesTo sourceSets.datagen
+
+    runs {
+        configureEach {
+            gameDirectory = project.file("runs/${it.name}")
+            sourceSet = sourceSets.gameTest
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        gameTestServer {
+            type = 'gameTestServer'
+        }
+        data {
+            data()
+            sourceSet = sourceSets.datagen
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+    }
+
+    mods {
+        "${project.mod_id}" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.gameTest
+            sourceSet sourceSets.testFixtures
+            sourceSet sourceSets.datagen
+        }
+    }
+
+    unitTest {
+        enable()
+        testedMod = mods.getByName(project.mod_id)
+    }
+}
+
+dependencies {
+    compileOnly "org.jspecify:jspecify:${versions.jspecify}"
+    testCompileOnly "org.jspecify:jspecify:${versions.jspecify}"
+    testFixturesCompileOnly "org.jspecify:jspecify:${versions.jspecify}"
+
+    testFixturesApi "net.datafaker:datafaker:${versions.datafaker}"
+
+    testImplementation platform("org.junit:junit-bom:${versions.junit}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation "org.assertj:assertj-core:${versions.assertj}"
+    testImplementation "net.neoforged:testframework:${project.neo_version}"
+
+    gameTestImplementation "net.datafaker:datafaker:${versions.datafaker}"
+    additionalRuntimeClasspath "net.datafaker:datafaker:${versions.datafaker}"
+
+    errorprone "com.google.errorprone:error_prone_core:${versions.errorproneCore}"
+    errorprone "com.uber.nullaway:nullaway:${versions.nullaway}"
+}
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : project.minecraft_version,
+            minecraft_version_range: project.minecraft_version_range,
+            neo_version            : project.neo_version,
+            neo_version_range      : project.neo_version_range,
+            loader_version_range   : project.loader_version_range,
+            mod_id                 : project.mod_id,
+            mod_name               : project.mod_name,
+            mod_license            : project.mod_license,
+            mod_version            : project.mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.errorprone {
+        check('NullAway', CheckSeverity.ERROR)
+        option('NullAway:OnlyNullMarked', 'true')
+    }
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        palantirJavaFormat(versions.palantirJavaFormat)
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+}
+
+tasks.withType(Wrapper).configureEach {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

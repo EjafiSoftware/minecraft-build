@@ -1,0 +1,16 @@
+[versions]
+moddev = "2.0.147"
+errorprone-plugin = "5.1.1"
+errorprone-core = "2.50.0"
+nullaway = "0.14.2"
+spotless = "8.10.4"
+palantir-java-format = "2.102.0"
+jspecify = "1.0.1"
+junit = "5.14.4"
+assertj = "3.27.7"
+datafaker = "2.7.0"
+
+[libraries]
+moddev-plugin = { module = "net.neoforged.moddev:net.neoforged.moddev.gradle.plugin", version.ref = "moddev" }
+errorprone-plugin = { module = "net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin", version.ref = "errorprone-plugin" }
+spotless-plugin = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version.ref = "spotless" }
