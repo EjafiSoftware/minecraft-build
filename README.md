@@ -13,17 +13,24 @@ GitHubPackagesPassword=<the token>
 
 In CI, set `ORG_GRADLE_PROJECT_GitHubPackagesUsername` to `${{ github.actor }}` and `ORG_GRADLE_PROJECT_GitHubPackagesPassword` to `${{ secrets.GITHUB_TOKEN }}`.
 
-The mod's `settings.gradle` adds the repository:
+The mod's `settings.gradle` adds the repository. The `exclusiveContent` filter makes `com.ejafi` groups resolve only from GitHub Packages, so a plugin published under the same ID elsewhere can never replace this one.
 
 ```groovy
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        maven {
-            name = 'GitHubPackages'
-            url = 'https://maven.pkg.github.com/EjafiSoftware/minecraft-build'
-            credentials(PasswordCredentials)
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'GitHubPackages'
+                    url = 'https://maven.pkg.github.com/EjafiSoftware/minecraft-build'
+                    credentials(PasswordCredentials)
+                }
+            }
+            filter {
+                includeGroupByRegex 'com\\.ejafi\\..*'
+            }
         }
+        gradlePluginPortal()
     }
 }
 ```
