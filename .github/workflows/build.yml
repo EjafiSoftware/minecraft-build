@@ -7,8 +7,10 @@ on:
   pull_request:
 
 jobs:
-  build:
+  plugin:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,23 +27,17 @@ jobs:
       - name: Build the convention plugin
         run: ./gradlew build
 
-      - name: Regenerate smoke mod data
-        run: ./gradlew -p smoke-mod runData
-
-      - name: Check generated data is committed
-        run: |
-          git status --porcelain
-          test -z "$(git status --porcelain)"
-
-      - name: Build the smoke mod
-        run: ./gradlew -p smoke-mod build
-
-      - name: Run smoke mod GameTests
-        run: ./gradlew -p smoke-mod runGameTestServer
+  smoke-mod:
+    uses: ./.github/workflows/mod-gate.yml
+    permissions:
+      contents: read
+      packages: read
+    with:
+      project-dir: smoke-mod
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [plugin, smoke-mod]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,0 +1,53 @@
+name: Mod gate
+
+on:
+  workflow_call:
+    inputs:
+      project-dir:
+        type: string
+        default: '.'
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      ORG_GRADLE_PROJECT_GitHubPackagesUsername: ${{ github.actor }}
+      ORG_GRADLE_PROJECT_GitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Regenerate data
+        run: ./gradlew -p "${{ inputs.project-dir }}" runData
+
+      - name: Check generated data is committed
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
+      - name: Build
+        run: ./gradlew -p "${{ inputs.project-dir }}" build
+
+      - name: Run GameTests
+        run: ./gradlew -p "${{ inputs.project-dir }}" runGameTestServer
+
+      - name: Upload the mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-jar
+          path: |
+            ${{ inputs.project-dir }}/build/libs/*.jar
+            !${{ inputs.project-dir }}/build/libs/*-test-fixtures.jar
+          if-no-files-found: error

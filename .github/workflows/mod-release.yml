@@ -1,0 +1,46 @@
+name: Mod release
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag matches mod_version and is on main
+        run: |
+          version=$(sed -n 's/^mod_version=//p' gradle.properties)
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match mod_version $version"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main"
+            exit 1
+          fi
+
+      - name: Extract the release notes from CHANGELOG.md
+        run: |
+          awk -v version="$GITHUB_REF_NAME" '$0 == "## " version || $0 == "## [" version "]" {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > release-notes.md
+          if [ -z "$(tr -d '[:space:]' < release-notes.md)" ]; then
+            echo "::error::CHANGELOG.md has no section for $GITHUB_REF_NAME"
+            exit 1
+          fi
+
+      - name: Download the mod jar
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-jar
+          path: dist
+
+      - name: Create the release
+        run: gh release create "$GITHUB_REF_NAME" dist/*.jar --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
