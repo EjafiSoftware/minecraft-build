@@ -1,6 +1,6 @@
 # minecraft-build
 
-Shared Gradle build configuration for Ejafi Games NeoForge mods. The `com.ejafi.neoforge-mod` convention plugin applies ModDevGradle, Error Prone with NullAway, PMD with CPD, and Spotless, and sets up the source sets, runs, and test dependencies every mod uses.
+This repo holds the shared Gradle build configuration for Ejafi Games NeoForge mods. Its `com.ejafi.neoforge-mod` convention plugin applies ModDevGradle, Error Prone with NullAway, PMD with CPD, and Spotless, and sets up the source sets, runs, and test dependencies every mod uses.
 
 ## Using the plugin
 
