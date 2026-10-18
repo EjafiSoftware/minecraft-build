@@ -11,7 +11,7 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: read
     env:
       ORG_GRADLE_PROJECT_GitHubPackagesUsername: ${{ github.actor }}
@@ -28,16 +28,14 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
-        with:
-          dependency-graph: generate-and-submit
 
       - name: Regenerate data
         run: ./gradlew -p "${{ inputs.project-dir }}" runData
 
       - name: Check generated data is committed
         run: |
-          git status --porcelain -- ':!dependency-graph-reports'
-          test -z "$(git status --porcelain -- ':!dependency-graph-reports')"
+          git status --porcelain
+          test -z "$(git status --porcelain)"
 
       - name: Build
         run: ./gradlew -p "${{ inputs.project-dir }}" build
@@ -53,15 +51,3 @@ jobs:
             ${{ inputs.project-dir }}/build/libs/*.jar
             !${{ inputs.project-dir }}/build/libs/*-test-fixtures.jar
           if-no-files-found: error
-
-  dependency-review:
-    if: github.event_name == 'pull_request'
-    needs: gate
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@v5
-        with:
-          retry-on-snapshot-warnings: true

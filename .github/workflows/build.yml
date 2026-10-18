@@ -37,7 +37,7 @@ jobs:
     if: github.ref_type != 'tag'
     uses: ./.github/workflows/mod-gate.yml
     permissions:
-      contents: write
+      contents: read
       packages: read
     with:
       project-dir: smoke-mod
