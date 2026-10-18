@@ -39,7 +39,7 @@ The mod's `build.gradle` applies the plugin and declares only the dependencies t
 
 ```groovy
 plugins {
-    id 'com.ejafi.neoforge-mod' version '1.2.2'
+    id 'com.ejafi.neoforge-mod' version '1.3.0'
 }
 ```
 
@@ -90,14 +90,14 @@ concurrency:
 
 jobs:
   gate:
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-gate.yml@v1.2.2
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-gate.yml@v1.3.0
     permissions:
       contents: write
       packages: read
 
   codeql:
     if: github.ref == 'refs/heads/main'
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-codeql.yml@v1.2.2
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-codeql.yml@v1.3.0
     permissions:
       contents: read
       packages: read
@@ -106,16 +106,19 @@ jobs:
   release:
     if: github.ref_type == 'tag'
     needs: gate
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-release.yml@v1.2.2
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-release.yml@v1.3.0
     permissions:
       contents: write
+    secrets:
+      CURSE_API_TOKEN: ${{ secrets.CURSE_API_TOKEN }}
 ```
 
 - **`mod-gate.yml`** runs `runData` and fails if it changes any committed file, then runs `build` and `runGameTestServer`. It uploads the mod jar, without the test-fixtures jar, as the `mod-jar` artifact. Its Gradle runs submit the resolved dependencies to the repository's dependency graph, which is why the job needs `contents: write`. On a pull request, a second job runs the dependency review action against that graph and fails when the pull request adds a dependency with a known vulnerability.
 - **`mod-codeql.yml`** compiles every source set under CodeQL and uploads the Java results to the repository's code scanning alerts. The caller runs it only on pushes to `main`.
+- **`mod-release.yml`** runs for a tag that matches `mod_version` exactly, such as `2.1.0`, on a commit in `main`. It creates a GitHub release titled with the version, attaches the jar, and takes the notes from the `## 2.1.0` or `## [2.1.0]` section of `CHANGELOG.md`. A tag that doesn't match `mod_version`, a commit outside `main`, or a missing changelog section fails the job before anything is published.
+- **CurseForge upload.** When the mod's `gradle.properties` sets `curseforge_project_id`, a second job in `mod-release.yml` uploads the same jar to that CurseForge project as a release file, with the GitHub release notes as its markdown changelog. It tags the file with `minecraft_version`, NeoForge, Java 21, Client, and Server, and fails if CurseForge doesn't list exactly one game version for each. The upload authenticates with the `CURSE_API_TOKEN` organization secret, which the caller passes in. CurseForge moderates each file, so it appears on the project page only after review. A failed upload can be rerun on its own, because the job runs after the GitHub release is created.
 
 A push or pull request that changes only markdown files starts no run. GitHub doesn't apply path filters to tag pushes, so a release tag always runs. A new commit on a pull request cancels that pull request's run in progress.
-- **`mod-release.yml`** runs for a tag that matches `mod_version` exactly, such as `2.1.0`, on a commit in `main`. It creates a GitHub release titled with the version, attaches the jar, and takes the notes from the `## 2.1.0` or `## [2.1.0]` section of `CHANGELOG.md`. A tag that doesn't match `mod_version`, a commit outside `main`, or a missing changelog section fails the job before anything is published.
 
 A mod's `.github/dependabot.yml` opens monthly pull requests for its `gradle` and `github-actions` ecosystems, with each ecosystem's updates grouped into one pull request. The `github-actions` updates move the reusable workflow refs to a new tag of this repo. Move the plugin version in `build.gradle` to the same tag in that pull request.
 

@@ -2,12 +2,17 @@ name: Mod release
 
 on:
   workflow_call:
+    secrets:
+      CURSE_API_TOKEN:
+        required: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      curseforge-project-id: ${{ steps.curseforge.outputs.project-id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -26,6 +31,10 @@ jobs:
             exit 1
           fi
 
+      - name: Read the CurseForge project ID
+        id: curseforge
+        run: echo "project-id=$(sed -n 's/^curseforge_project_id=//p' gradle.properties)" >> "$GITHUB_OUTPUT"
+
       - name: Extract the release notes from CHANGELOG.md
         run: |
           awk -v version="$GITHUB_REF_NAME" '$0 == "## " version || $0 == "## [" version "]" {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > release-notes.md
@@ -42,5 +51,52 @@ jobs:
 
       - name: Create the release
         run: gh release create "$GITHUB_REF_NAME" dist/*.jar --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  curseforge:
+    if: needs.release.outputs.curseforge-project-id != ''
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CURSEFORGE_API: https://minecraft.curseforge.com/api
+      CURSE_API_TOKEN: ${{ secrets.CURSE_API_TOKEN }}
+      CURSEFORGE_PROJECT_ID: ${{ needs.release.outputs.curseforge-project-id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download the mod jar
+        uses: actions/download-artifact@v8
+        with:
+          name: mod-jar
+          path: dist
+
+      - name: Resolve the CurseForge game version IDs
+        run: |
+          curl -fsS -H "X-Api-Token: $CURSE_API_TOKEN" "$CURSEFORGE_API/game/version-types" > version-types.json
+          curl -fsS -H "X-Api-Token: $CURSE_API_TOKEN" "$CURSEFORGE_API/game/versions" > versions.json
+          jq -c \
+            --arg minecraft "$(sed -n 's/^minecraft_version=//p' gradle.properties)" \
+            --slurpfile types version-types.json \
+            'def pick($name; f): [.[] | select(.name == $name and f) | .id] | if length == 1 then .[0] else error("CurseForge has \(length) game versions named \($name)") end;
+            [$types[0][] | select(.slug | startswith("minecraft-")) | .id] as $minecraftTypes
+            | [pick($minecraft; .gameVersionTypeID | IN($minecraftTypes[])), pick("NeoForge"; true), pick("Java 21"; true), pick("Client"; true), pick("Server"; true)]' \
+            versions.json > game-versions.json
+
+      - name: Upload the mod jar to CurseForge
+        run: |
+          gh release view "$GITHUB_REF_NAME" --json body --jq .body > release-notes.md
+          jq -n \
+            --rawfile changelog release-notes.md \
+            --slurpfile gameVersions game-versions.json \
+            '{changelog: $changelog, changelogType: "markdown", gameVersions: $gameVersions[0], releaseType: "release"}' > metadata.json
+          curl -sS --fail-with-body \
+            -H "X-Api-Token: $CURSE_API_TOKEN" \
+            -F "metadata=<metadata.json;type=application/json" \
+            -F "file=@$(ls dist/*.jar)" \
+            "$CURSEFORGE_API/projects/$CURSEFORGE_PROJECT_ID/upload-file"
         env:
           GH_TOKEN: ${{ github.token }}
