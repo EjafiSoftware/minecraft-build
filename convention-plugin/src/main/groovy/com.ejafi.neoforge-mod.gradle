@@ -4,6 +4,7 @@ plugins {
     id 'java-library'
     id 'java-test-fixtures'
     id 'idea'
+    id 'pmd'
     id 'net.neoforged.moddev'
     id 'net.ltgt.errorprone'
     id 'com.diffplug.spotless'
@@ -45,6 +46,7 @@ configurations {
     gameTestCompileOnly.extendsFrom compileOnly
     datagenImplementation.extendsFrom implementation
     datagenCompileOnly.extendsFrom compileOnly
+    cpd
 }
 
 neoForge {
@@ -114,6 +116,13 @@ dependencies {
 
     errorprone "com.google.errorprone:error_prone_core:${versions.errorproneCore}"
     errorprone "com.uber.nullaway:nullaway:${versions.nullaway}"
+
+    pmdAux javaToolchains.launcherFor(java.toolchain)
+            .map { it.metadata.installationPath }
+            .map { it.files('lib/jrt-fs.jar') }
+
+    cpd "net.sourceforge.pmd:pmd-cli:${versions.pmd}"
+    cpd "net.sourceforge.pmd:pmd-java:${versions.pmd}"
 }
 
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
@@ -152,6 +161,28 @@ spotless {
         trimTrailingWhitespace()
         endWithNewline()
     }
+}
+
+pmd {
+    toolVersion = versions.pmd
+    ruleSets = []
+    ruleSetConfig = resources.text.fromString(getClass().getResource('/com/ejafi/gradle/pmd-ruleset.xml').text)
+    consoleOutput = true
+}
+
+var cpdCheck = tasks.register('cpdCheck', JavaExec) {
+    description = 'Fails when CPD finds duplicated Java code in any source set.'
+    group = 'verification'
+    classpath = configurations.cpd
+    mainClass = 'net.sourceforge.pmd.cli.PmdCli'
+    args 'cpd', '--minimum-tokens', '100'
+    sourceSets.collectMany { it.java.srcDirs }.findAll { it.exists() }.each {
+        args '--dir', it.absolutePath
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn cpdCheck
 }
 
 tasks.named('test', Test).configure {

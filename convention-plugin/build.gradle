@@ -13,16 +13,19 @@ dependencies {
 
 tasks.named('processResources', ProcessResources).configure {
     var versions = [
-            errorproneCore    : libs.versions.errorprone.core.get(),
-            nullaway          : libs.versions.nullaway.get(),
-            palantirJavaFormat: libs.versions.palantir.java.format.get(),
-            jspecify          : libs.versions.jspecify.get(),
-            junit             : libs.versions.junit.get(),
-            assertj           : libs.versions.assertj.get(),
-            datafaker         : libs.versions.datafaker.get(),
+            errorproneCore    : libs.errorprone.core.get().version,
+            nullaway          : libs.nullaway.get().version,
+            palantirJavaFormat: libs.palantir.java.format.get().version,
+            jspecify          : libs.jspecify.get().version,
+            junit             : libs.junit.bom.get().version,
+            assertj           : libs.assertj.get().version,
+            datafaker         : libs.datafaker.get().version,
+            pmd               : libs.pmd.java.get().version,
     ]
     inputs.properties versions
-    expand versions
+    filesMatching('**/versions.properties') {
+        expand versions
+    }
 }
 
 publishing {
