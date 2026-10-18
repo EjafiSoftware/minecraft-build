@@ -39,7 +39,7 @@ The mod's `build.gradle` applies the plugin and declares only the dependencies t
 
 ```groovy
 plugins {
-    id 'com.ejafi.neoforge-mod' version '1.2.0'
+    id 'com.ejafi.neoforge-mod' version '1.2.1'
 }
 ```
 
@@ -80,18 +80,24 @@ on:
   push:
     branches: [main]
     tags: ['[0-9]+.[0-9]+.[0-9]+']
+    paths-ignore: ['**.md']
   pull_request:
+    paths-ignore: ['**.md']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   gate:
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-gate.yml@v1.2.0
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-gate.yml@v1.2.1
     permissions:
       contents: write
       packages: read
 
   codeql:
-    if: github.ref_type != 'tag'
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-codeql.yml@v1.2.0
+    if: github.ref == 'refs/heads/main'
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-codeql.yml@v1.2.1
     permissions:
       contents: read
       packages: read
@@ -100,16 +106,18 @@ jobs:
   release:
     if: github.ref_type == 'tag'
     needs: gate
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-release.yml@v1.2.0
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-release.yml@v1.2.1
     permissions:
       contents: write
 ```
 
 - **`mod-gate.yml`** runs `runData` and fails if it changes any committed file, then runs `build` and `runGameTestServer`. It uploads the mod jar, without the test-fixtures jar, as the `mod-jar` artifact. Its Gradle runs submit the resolved dependencies to the repository's dependency graph, which is why the job needs `contents: write`. On a pull request, a second job runs the dependency review action against that graph and fails when the pull request adds a dependency with a known vulnerability.
-- **`mod-codeql.yml`** compiles every source set under CodeQL and uploads the Java results to the repository's code scanning alerts.
+- **`mod-codeql.yml`** compiles every source set under CodeQL and uploads the Java results to the repository's code scanning alerts. The caller runs it only on pushes to `main`.
+
+A push or pull request that changes only markdown files starts no run. GitHub doesn't apply path filters to tag pushes, so a release tag always runs. A new commit on a pull request cancels that pull request's run in progress.
 - **`mod-release.yml`** runs for a tag that matches `mod_version` exactly, such as `2.1.0`, on a commit in `main`. It creates a GitHub release titled with the version, attaches the jar, and takes the notes from the `## 2.1.0` or `## [2.1.0]` section of `CHANGELOG.md`. A tag that doesn't match `mod_version`, a commit outside `main`, or a missing changelog section fails the job before anything is published.
 
-A mod's `.github/dependabot.yml` opens weekly pull requests for its `gradle` and `github-actions` ecosystems, with each ecosystem's updates grouped into one pull request. The `github-actions` updates move the reusable workflow refs to a new tag of this repo. Move the plugin version in `build.gradle` to the same tag in that pull request.
+A mod's `.github/dependabot.yml` opens monthly pull requests for its `gradle` and `github-actions` ecosystems, with each ecosystem's updates grouped into one pull request. The `github-actions` updates move the reusable workflow refs to a new tag of this repo. Move the plugin version in `build.gradle` to the same tag in that pull request.
 
 ## Working on the plugin locally
 
@@ -125,4 +133,4 @@ For a one-off run without editing `settings.gradle`, `./gradlew --include-build 
 
 ## Releasing
 
-Set `version` in `gradle.properties`, then push a tag named `v<version>`. CI builds the plugin and runs the smoke mod through `mod-gate.yml`, then publishes the plugin and its marker to GitHub Packages. The same tag is the ref that mods pin the reusable workflows to.
+Set `version` in `gradle.properties`, then push a tag named `v<version>`. CI builds the plugin, then publishes the plugin and its marker to GitHub Packages. The tag run skips the smoke mod, so tag a commit whose run on `main` passed. The same tag is the ref that mods pin the reusable workflows to.

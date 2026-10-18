@@ -13,7 +13,7 @@ This file guides coding agents working in this repository. [README.md](README.md
 | `smoke-mod/` | A separate Gradle build that applies the plugin through `includeBuild '..'`. Its block, unit test, GameTest, test fixture, and language provider exercise each source set the plugin sets up. |
 | `.github/workflows/mod-gate.yml`, `mod-codeql.yml`, `mod-release.yml` | Reusable workflows that mods call for their gate with dependency review, their CodeQL analysis, and their tagged releases. `mod-gate.yml` and `mod-codeql.yml` take a `project-dir` input, which this repo's CI sets to `smoke-mod`. |
 | `.github/workflows/build.yml` | This repo's CI, which builds the plugin, runs the smoke mod through `mod-gate.yml` and `mod-codeql.yml`, and publishes on a `v*` tag |
-| `.github/dependabot.yml` | Weekly grouped updates for the `gradle` ecosystem in this build and the smoke mod, and for `github-actions`. `gradle/actions` stays on v5, because v6 puts its caching under Gradle's proprietary Terms of Use. |
+| `.github/dependabot.yml` | Monthly grouped updates for the `gradle` ecosystem in this build and the smoke mod, and for `github-actions`. `gradle/actions` stays on v5, because v6 puts its caching under Gradle's proprietary Terms of Use. |
 
 A version change is made only in `gradle/libs.versions.toml`. A library the plugin adds to a mod is a `[libraries]` entry, so Dependabot can update it, and also needs its key in `convention-plugin/build.gradle` and in `versions.properties`.
 
@@ -27,7 +27,7 @@ A version change is made only in `gradle/libs.versions.toml`. A library the plug
 | `./gradlew -p smoke-mod runGameTestServer` | Runs the smoke mod's GameTests and exits |
 | `./gradlew -p smoke-mod spotlessApply` | Formats the smoke mod's sources |
 
-**The gate** is `./gradlew build`, then the smoke mod's `runData` with `git status --porcelain` printing nothing, then its `build`, then its `runGameTestServer`. CI runs the same steps, with the smoke mod's steps going through `mod-gate.yml`, and on a `v*` tag also publishes the plugin. A change to a reusable workflow reaches a mod only when the mod moves its pinned ref to a new tag.
+**The gate** is `./gradlew build`, then the smoke mod's `runData` with `git status --porcelain` printing nothing, then its `build`, then its `runGameTestServer`. CI runs the same steps on pull requests and on `main`, with the smoke mod's steps going through `mod-gate.yml`, and runs CodeQL on `main` only. A `v*` tag builds and publishes the plugin without rerunning the smoke mod. A change to a reusable workflow reaches a mod only when the mod moves its pinned ref to a new tag.
 
 ## Coding standards
 
