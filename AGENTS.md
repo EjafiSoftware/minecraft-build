@@ -11,7 +11,7 @@ This file guides coding agents working in this repository. [README.md](README.md
 | `convention-plugin/src/main/resources/com/ejafi/gradle/pmd-ruleset.xml` | The PMD ruleset every mod runs |
 | `gradle/libs.versions.toml` | Every version the plugin uses, both for the plugins it applies, which are `implementation` dependencies of `convention-plugin`, and for the libraries it adds to a mod |
 | `smoke-mod/` | A separate Gradle build that applies the plugin through `includeBuild '..'`. Its block, unit test, GameTest, test fixture, and language provider exercise each source set the plugin sets up. |
-| `.github/workflows/mod-gate.yml`, `mod-codeql.yml`, `mod-release.yml` | Reusable workflows that mods call for their gate with dependency review, their CodeQL analysis, and their tagged releases. `mod-gate.yml` and `mod-codeql.yml` take a `project-dir` input, which this repo's CI sets to `smoke-mod`. |
+| `.github/workflows/mod-gate.yml`, `mod-codeql.yml`, `mod-release.yml` | Reusable workflows that mods call for their gate, their CodeQL analysis, and their tagged releases. `mod-gate.yml` and `mod-codeql.yml` take a `project-dir` input, which this repo's CI sets to `smoke-mod`. |
 | `.github/workflows/build.yml` | This repo's CI, which builds the plugin, runs the smoke mod through `mod-gate.yml` and `mod-codeql.yml`, and publishes on a `v*` tag |
 | `.github/dependabot.yml` | Monthly grouped updates for the `gradle` ecosystem in this build and the smoke mod, and for `github-actions`. `gradle/actions` stays on v5, because v6 puts its caching under Gradle's proprietary Terms of Use. |
 
