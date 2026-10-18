@@ -1,0 +1,45 @@
+name: Mod CodeQL
+
+on:
+  workflow_call:
+    inputs:
+      project-dir:
+        type: string
+        default: '.'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    env:
+      ORG_GRADLE_PROJECT_GitHubPackagesUsername: ${{ github.actor }}
+      ORG_GRADLE_PROJECT_GitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Compile every source set
+        run: >-
+          ./gradlew -p "${{ inputs.project-dir }}" --no-daemon --no-build-cache --no-configuration-cache
+          compileJava compileTestJava compileTestFixturesJava compileGameTestJava compileDatagenJava
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
