@@ -39,7 +39,7 @@ The mod's `build.gradle` applies the plugin and declares only the dependencies t
 
 ```groovy
 plugins {
-    id 'com.ejafi.neoforge-mod' version '1.2.1'
+    id 'com.ejafi.neoforge-mod' version '1.2.2'
 }
 ```
 
@@ -64,7 +64,7 @@ The plugin reads these from the mod's `gradle.properties`, and the build fails n
 - **Source sets.** `main`, `test`, `testFixtures`, `gameTest`, and `datagen`. `gameTest` sees `main` and `testFixtures`, and `datagen` sees `main`. All five are bound to the mod, so the dev runs and the unit-test runtime load them as one mod, and the jar contains only `main`.
 - **Runs.** `client`, `server`, and `gameTestServer` run the `gameTest` source set with the mod's GameTest namespace enabled. `data` runs the `datagen` source set and writes to `src/generated/resources/`. Each run uses `runs/<name>` as its game directory.
 - **Resources.** `src/generated/resources/` is a resource directory with its `.cache` excluded. `src/main/templates/META-INF/neoforge.mods.toml` is expanded with the properties above.
-- **Compilation.** Java 21, UTF-8, and NullAway at error severity in `OnlyNullMarked` mode, so a package is checked once its `package-info.java` carries `@NullMarked`.
+- **Compilation.** Java 21, UTF-8, and NullAway at error severity in `OnlyNullMarked` mode, so a package is checked once its `package-info.java` carries `@NullMarked`. `-Werror` makes every javac and Error Prone warning fail the build.
 - **Static analysis.** PMD runs over every source set with the rules in `convention-plugin/src/main/resources/com/ejafi/gradle/pmd-ruleset.xml`. That file holds the best practices, error prone, multithreading, performance, and security categories, minus the rules that misread Minecraft and Java 21 idioms or repeat an Error Prone check. `cpdCheck` fails on any duplicated block of 100 tokens or more across the source sets. `./gradlew check`, and so `build`, runs both.
 - **Formatting.** Spotless with palantir-java-format over `src/*/java/**`. `./gradlew spotlessApply` formats every source set.
 - **Dependencies.** JSpecify as `compileOnly` everywhere. JUnit Jupiter, AssertJ, and `testframework` for unit tests. Datafaker for test fixtures, GameTests, and the dev runs.
@@ -90,14 +90,14 @@ concurrency:
 
 jobs:
   gate:
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-gate.yml@v1.2.1
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-gate.yml@v1.2.2
     permissions:
       contents: write
       packages: read
 
   codeql:
     if: github.ref == 'refs/heads/main'
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-codeql.yml@v1.2.1
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-codeql.yml@v1.2.2
     permissions:
       contents: read
       packages: read
@@ -106,7 +106,7 @@ jobs:
   release:
     if: github.ref_type == 'tag'
     needs: gate
-    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-release.yml@v1.2.1
+    uses: EjafiSoftware/minecraft-build/.github/workflows/mod-release.yml@v1.2.2
     permissions:
       contents: write
 ```
