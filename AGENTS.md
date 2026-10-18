@@ -13,7 +13,7 @@ This file guides coding agents working in this repository. [README.md](README.md
 | `smoke-mod/` | A separate Gradle build that applies the plugin through `includeBuild '..'`. Its block, unit test, GameTest, test fixture, and language provider exercise each source set the plugin sets up. |
 | `.github/workflows/mod-gate.yml`, `mod-codeql.yml`, `mod-release.yml` | Reusable workflows that mods call for their gate with dependency review, their CodeQL analysis, and their tagged releases. `mod-gate.yml` and `mod-codeql.yml` take a `project-dir` input, which this repo's CI sets to `smoke-mod`. |
 | `.github/workflows/build.yml` | This repo's CI, which builds the plugin, runs the smoke mod through `mod-gate.yml` and `mod-codeql.yml`, and publishes on a `v*` tag |
-| `.github/dependabot.yml` | Weekly grouped updates for the `gradle` ecosystem in this build and the smoke mod, and for `github-actions` |
+| `.github/dependabot.yml` | Weekly grouped updates for the `gradle` ecosystem in this build and the smoke mod, and for `github-actions`. `gradle/actions` stays on v5, because v6 puts its caching under Gradle's proprietary Terms of Use. |
 
 A version change is made only in `gradle/libs.versions.toml`. A library the plugin adds to a mod is a `[libraries]` entry, so Dependabot can update it, and also needs its key in `convention-plugin/build.gradle` and in `versions.properties`.
 

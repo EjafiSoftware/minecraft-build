@@ -14,6 +14,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: 'gradle/actions*'
+        update-types: ['version-update:semver-major']
     groups:
       github-actions:
         patterns: ['*']
