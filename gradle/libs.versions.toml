@@ -1,10 +1,10 @@
 [versions]
 moddev = "2.0.148"
 errorprone-plugin = "5.1.1"
-errorprone-core = "2.50.0"
-nullaway = "0.14.2"
+errorprone-core = "2.51.0"
+nullaway = "0.14.3"
 spotless = "8.10.4"
-palantir-java-format = "2.102.0"
+palantir-java-format = "2.103.0"
 jspecify = "1.0.1"
 junit = "6.1.3"
 assertj = "3.27.7"
